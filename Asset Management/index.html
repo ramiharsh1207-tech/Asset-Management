@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas AM — Asset Management Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f5f0; --panel:#ffffff; --panel2:#f1ede4; --line:#e3ddd0;
+    --txt:#2b2620; --muted:#8a8273; --accent:#b8860b; --accent2:#a8780a;
+    --green:#3f7d4f; --amber:#c0851a; --red:#c0492f; --chip:#efeadf;
+    --sidebar:#1f3d2f; --sidebar-line:#2f5240;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5}
+  a{color:var(--accent);text-decoration:none;cursor:pointer}
+  .app{display:flex;min-height:100vh}
+  .side{width:222px;background:var(--sidebar);color:#f2efe6;padding:20px 0;flex-shrink:0}
+  .brand{padding:0 20px 18px;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;color:#fff}
+  .brand .dot{width:12px;height:12px;border-radius:3px;background:var(--accent)}
+  .brand small{display:block;font-size:11px;color:#9bb3a3;font-weight:400;margin-top:2px}
+  .nav .grp{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#7d9588;padding:14px 20px 4px}
+  .nav a{display:block;padding:9px 20px;color:#bcccc1;font-weight:500;border-left:3px solid transparent;font-size:13.5px}
+  .nav a:hover{color:#fff;background:var(--sidebar-line)}
+  .nav a.active{color:#fff;background:var(--sidebar-line);border-left-color:var(--accent)}
+  .main{flex:1;padding:28px 36px;max-width:1300px}
+  h1{font-size:22px;margin-bottom:4px}
+  .sub{color:var(--muted);margin-bottom:22px}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px}
+  .kpi .label{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+  .kpi .val{font-size:23px;font-weight:700}
+  .kpi .val.red{color:var(--red)} .kpi .val.amber{color:var(--amber)} .kpi .val.green{color:var(--green)}
+  .kpi .sm{font-size:11px;color:var(--muted);margin-top:3px}
+  .read{background:linear-gradient(135deg,#fbf6ea,#f4eee0);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:15px 18px;margin-bottom:22px}
+  .read h3{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .read p{font-size:13.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:22px}
+  .card h2{font-size:15px;padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:10px 18px;border-bottom:1px solid var(--line);font-size:13px}
+  th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel2)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .b-green{background:rgba(63,125,79,.13);color:var(--green)}
+  .b-amber{background:rgba(192,133,26,.15);color:var(--amber)}
+  .b-red{background:rgba(192,73,47,.13);color:var(--red)}
+  .b-gray{background:var(--chip);color:var(--muted)}
+  .b-blue{background:rgba(184,134,11,.14);color:var(--accent)}
+  .filters{display:flex;gap:8px;padding:13px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .filters button{background:var(--chip);color:var(--muted);border:1px solid var(--line);padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px}
+  .filters button.active{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+  .toggle{display:flex;gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .toggle button{background:var(--panel);color:var(--muted);border:none;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600}
+  .toggle button.active{background:var(--accent2);color:#fff}
+  .bar{height:7px;background:var(--chip);border-radius:4px;overflow:hidden;width:90px;display:inline-block;vertical-align:middle}
+  .bar i{display:block;height:100%;background:var(--accent)}
+  .gantt-row{display:grid;grid-template-columns:170px 1fr;align-items:center;gap:12px;padding:8px 18px;border-bottom:1px solid var(--line)}
+  .gantt-track{position:relative;height:22px;background:var(--chip);border-radius:5px}
+  .gantt-fill{position:absolute;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent2),var(--accent));display:flex;align-items:center;padding:0 8px;font-size:11px;color:#fff;white-space:nowrap}
+  .back{color:var(--muted);margin-bottom:14px;display:inline-block}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .type-tag{font-size:11px;color:var(--muted)}
+  .muted{color:var(--muted)}
+  .pl-sub td{color:var(--muted);font-style:italic}
+  .pl-total td{font-weight:700;background:var(--panel2)}
+  .pl-noi td{font-weight:700;background:rgba(184,134,11,.1);font-size:14px}
+  .var-pos{color:var(--green)} .var-neg{color:var(--red)}
+  .stack{display:flex;height:24px;border-radius:6px;overflow:hidden;margin:6px 0}
+  .stack span{display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600}
+  .splash{position:fixed;inset:0;z-index:100;background:linear-gradient(150deg,#1f3d2f,#16302440 60%,#2b2620);display:flex;align-items:center;justify-content:center;padding:24px}
+  .splash-card{max-width:560px;text-align:center;color:#f2efe6}
+  .splash-logo{display:inline-flex;align-items:center;gap:9px;font-size:22px;font-weight:700;color:#fff;margin-bottom:22px}
+  .splash-logo .dot{width:15px;height:15px;border-radius:4px;background:var(--accent)}
+  .splash-card h1{font-size:38px;line-height:1.15;margin-bottom:16px;color:#fff}
+  .splash-card p{font-size:15px;color:#cdd8d0;margin-bottom:28px;line-height:1.6}
+  .splash-card button{background:var(--accent);color:#1f1404;border:none;padding:13px 30px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer}
+  .splash-card button:hover{background:#caa023}
+  .splash-by{margin-top:30px;font-size:12.5px;color:#9bb3a3;letter-spacing:.02em}
+  .chartgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:22px}
+  .chartbox{padding:14px 16px 16px;height:220px}
+  .addbtn{background:var(--accent2);color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+  .rowact a{font-size:12px}
+  .navfoot{margin-top:18px;padding:10px 20px;border-top:1px solid var(--sidebar-line)}
+  .navfoot a{color:#9bb3a3;font-size:11.5px}
+  .modal-bg{position:fixed;inset:0;background:rgba(20,15,5,.5);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:60px 16px;overflow:auto}
+  .modal-box{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:430px;max-width:94vw;padding:22px 24px;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+  .modal-box h3{margin-bottom:16px;font-size:17px}
+  .modal-box label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:13px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .modal-box input,.modal-box select{display:block;width:100%;margin-top:5px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;font-size:14px;background:#fff;color:var(--txt);font-weight:400;text-transform:none;letter-spacing:0}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+  .modal-actions button{padding:9px 18px;border-radius:7px;border:none;cursor:pointer;font-weight:600;font-size:13px}
+  .modal-actions .ghost{background:var(--chip);color:var(--txt);border:1px solid var(--line)}
+  .modal-actions .primary{background:var(--accent2);color:#fff}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.chartgrid{grid-template-columns:1fr}.side{width:60px}.brand small,.nav a span,.nav .grp,.navfoot{display:none}}
+</style>
+</head>
+<body>
+<div class="splash" id="splash">
+  <div class="splash-card">
+    <div class="splash-logo"><span class="dot"></span> Atlas AM</div>
+    <h1>Asset Management Portal</h1>
+    <p>A demonstration CRM &amp; portfolio analytics platform for real estate asset management — leases, NOI, debt, construction, investor capital, and levered returns.</p>
+    <button onclick="enterApp()">Enter Portal &rarr;</button>
+    <div class="splash-by">Built by <strong>Harsh</strong> &middot; M.S. Real Estate, New York University &middot; Asset Management</div>
+  </div>
+</div>
+<div class="app">
+  <nav class="side">
+    <div class="brand"><span class="dot"></span><div>Atlas AM<small>Asset Management</small></div></div>
+    <div class="nav" id="nav">
+      <div class="grp">Overview</div>
+      <a data-view="dashboard" class="active"><span>Dashboard</span></a>
+      <a data-view="properties"><span>Properties</span></a>
+      <div class="grp">Financials</div>
+      <a data-view="financials"><span>P&amp;L / NOI</span></a>
+      <a data-view="debt"><span>Debt & Returns</span></a>
+      <a data-view="investors"><span>Investors & Capital</span></a>
+      <a data-view="returns"><span>Returns & IRR</span></a>
+      <div class="grp">Operations</div>
+      <a data-view="leases"><span>Leases</span></a>
+      <a data-view="construction"><span>Construction</span></a>
+      <a data-view="ops"><span>Ops & Compliance</span></a>
+      <div class="navfoot"><a onclick="resetData()">↺ Reset demo data</a></div>
+    </div>
+  </nav>
+  <main class="main" id="main"></main>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal-box">
+    <h3 class="m-title"></h3>
+    <div class="m-body"></div>
+    <div class="modal-actions"><button class="ghost" onclick="closeModal()">Cancel</button><button class="primary" onclick="submitModal()">Save</button></div>
+  </div>
+</div>
+
+<script>
+const TODAY = new Date('2026-06-01');
+// ---------- properties ----------
+const properties = [
+  {id:'p1', name:'Riverview Apartments', addr:'410 E 12th St, New York, NY', type:'Multifamily', units:48, year:1998, value:19000000, acqPrice:16200000, acqDate:'2022-04-15', holdYears:5, strategy:'Core-plus', thesis:'Light interior renovations + utility bill-back to push rents to market on turnover.', uwNOI:980000},
+  {id:'p2', name:'The Lofts on Grand', addr:'88 Grand Ave, Brooklyn, NY', type:'Mixed-Use', units:32, year:2007, value:14000000, acqPrice:12500000, acqDate:'2023-01-20', holdYears:5, strategy:'Value-add', thesis:'Re-tenant ground-floor retail at market, stabilize residential vacancy.', uwNOI:720000},
+  {id:'p3', name:'Harborline Residences', addr:'15 Pier Rd, Jersey City, NJ', type:'Multifamily', units:60, year:2015, value:26000000, acqPrice:23000000, acqDate:'2021-09-01', holdYears:7, strategy:'Core', thesis:'Newer asset; add rooftop amenity to support premium pricing on upper units.', uwNOI:1380000},
+  {id:'p4', name:'Court Street Commons', addr:'220 Court St, Brooklyn, NY', type:'Mixed-Use', units:24, year:1989, value:9000000, acqPrice:7600000, acqDate:'2023-06-10', holdYears:5, strategy:'Value-add', thesis:'Gut-renovate dated units, reposition retail; significant mark-to-market upside.', uwNOI:470000},
+];
+// ---------- P&L (annual) ----------
+// build helper: income (positive add, parens = deduction handled by sign), expense positive
+const fin = {
+  p1:{income:[['Gross Potential Rent',2000000,1980000],['Vacancy Loss',-120000,-100000],['Loss to Lease',-40000,-35000],['Other Income (parking, fees)',60000,55000]],
+      expense:[['Property Tax',240000,238000],['Insurance',72000,68000],['Utilities',131000,120000],['Repairs & Maintenance',112000,100000],['Management Fee',76000,76000],['Payroll',150000,148000],['Admin & G&A',31000,28000],['Marketing',28000,22000]]},
+  p2:{income:[['Gross Potential Rent',1320000,1340000],['Vacancy Loss',-95000,-70000],['Loss to Lease',-30000,-28000],['Other Income',48000,45000]],
+      expense:[['Property Tax',168000,165000],['Insurance',54000,50000],['Utilities',88000,82000],['Repairs & Maintenance',74000,70000],['Management Fee',52000,52000],['Payroll',96000,94000],['Admin & G&A',22000,20000],['Marketing',18000,15000]]},
+  p3:{income:[['Gross Potential Rent',2680000,2650000],['Vacancy Loss',-134000,-150000],['Loss to Lease',-50000,-45000],['Other Income',92000,85000]],
+      expense:[['Property Tax',320000,318000],['Insurance',98000,92000],['Utilities',176000,165000],['Repairs & Maintenance',128000,120000],['Management Fee',107000,107000],['Payroll',205000,200000],['Admin & G&A',42000,38000],['Marketing',32000,28000]]},
+  p4:{income:[['Gross Potential Rent',920000,940000],['Vacancy Loss',-92000,-60000],['Loss to Lease',-28000,-25000],['Other Income',34000,32000]],
+      expense:[['Property Tax',112000,110000],['Insurance',38000,35000],['Utilities',62000,58000],['Repairs & Maintenance',58000,50000],['Management Fee',34000,34000],['Payroll',64000,62000],['Admin & G&A',16000,14000],['Marketing',14000,12000]]},
+};
+// ---------- debt ----------
+const debt = {
+  p1:{lender:'Eastbank CRE', balance:11400000, rate:5.25, amortYears:30, type:'Fixed', maturity:'2029-05-01'},
+  p2:{lender:'Meridian Bank', balance:8400000, rate:5.85, amortYears:0, type:'Interest-only', maturity:'2027-12-01'},
+  p3:{lender:'Agency (Freddie)', balance:15600000, rate:4.95, amortYears:30, type:'Fixed', maturity:'2031-08-01'},
+  p4:{lender:'Brooklyn Community Bk', balance:5850000, rate:6.40, amortYears:25, type:'Floating, SOFR+250', maturity:'2026-09-01'},
+};
+// ---------- leases ----------
+const leases = [
+  {prop:'p1', unit:'2B', tenant:'M. Alvarez', start:'2024-07-01', end:'2026-06-30', rent:3200, dep:3200, kind:'Residential'},
+  {prop:'p1', unit:'5A', tenant:'J. Chen', start:'2025-01-15', end:'2026-07-31', rent:2950, dep:2950, kind:'Residential'},
+  {prop:'p1', unit:'1C', tenant:'VACANT', start:'', end:'', rent:3100, dep:0, kind:'Residential'},
+  {prop:'p2', unit:'Retail-1', tenant:'Bluebird Coffee', start:'2022-09-01', end:'2027-08-31', rent:7800, dep:15600, kind:'Retail'},
+  {prop:'p2', unit:'3F', tenant:'K. Okafor', start:'2025-03-01', end:'2026-08-15', rent:3600, dep:3600, kind:'Residential'},
+  {prop:'p2', unit:'4F', tenant:'S. Patel', start:'2024-11-01', end:'2026-10-31', rent:3700, dep:3700, kind:'Residential'},
+  {prop:'p3', unit:'PH2', tenant:'D. Romano', start:'2025-06-01', end:'2027-05-31', rent:5400, dep:5400, kind:'Residential'},
+  {prop:'p3', unit:'12C', tenant:'L. Nguyen', start:'2025-09-01', end:'2026-06-20', rent:4100, dep:4100, kind:'Residential'},
+  {prop:'p4', unit:'Retail-A', tenant:'Court St. Pharmacy', start:'2021-05-01', end:'2026-06-30', rent:6200, dep:12400, kind:'Retail'},
+  {prop:'p4', unit:'2R', tenant:'VACANT', start:'', end:'', rent:2800, dep:0, kind:'Residential'},
+];
+// pad rent rolls so demo occupancy is realistic (occupied units vs total units)
+(function padRentRoll(){
+  const cfg={p1:{occ:45,rent:3050},p2:{occ:29,rent:3600},p3:{occ:56,rent:4300},p4:{occ:20,rent:2900}};
+  Object.entries(cfg).forEach(([pid,c])=>{
+    const cur=leases.filter(l=>l.prop===pid&&l.end).length;
+    let toAdd=c.occ-cur,i=1;
+    while(toAdd>0){
+      const mo=((i*7)%12)+1, yr=2026+Math.floor((i*7)/12);
+      const end=yr+'-'+String(mo).padStart(2,'0')+'-28';
+      leases.push({prop:pid,unit:String(100+i),tenant:'Resident '+i,start:'2024-06-01',end,rent:c.rent+((i%5)*50),dep:c.rent,kind:'Residential'});
+      i++;toAdd--;
+    }
+  });
+})();
+// ---------- construction ----------
+const projects = [
+  {prop:'p1', name:'Lobby & Common Area Renovation', scope:'Cosmetic refresh, new mailroom', budget:320000, spent:182000, start:'2026-03-01', target:'2026-07-15', pct:55, status:'In Progress'},
+  {prop:'p3', name:'Rooftop Amenity Build-Out', scope:'New roof deck & gym', budget:880000, spent:744000, start:'2025-11-01', target:'2026-05-15', pct:80, status:'Delayed'},
+  {prop:'p2', name:'Storefront Facade Upgrade', scope:'Retail facade + signage', budget:150000, spent:0, start:'2026-06-15', target:'2026-09-30', pct:0, status:'Planned'},
+  {prop:'p4', name:'Unit 2R Gut Renovation', scope:'Full unit turn', budget:65000, spent:68500, start:'2026-02-01', target:'2026-04-30', pct:100, status:'Complete'},
+];
+// ---------- investors (fund-level) ----------
+const fund = {name:'Atlas Value-Add Fund I', committed:26000000, called:22100000, distributed:4800000};
+const investors = [
+  {name:'Atlas Sponsor (GP)', role:'GP', commit:2600000, called:2210000, dist:560000, pct:10},
+  {name:'Meridian Capital LP', role:'LP', commit:9100000, called:7735000, dist:1680000, pct:35},
+  {name:'Cedar Family Office', role:'LP', commit:7800000, called:6630000, dist:1440000, pct:30},
+  {name:'Private LPs (pooled)', role:'LP', commit:6500000, called:5525000, dist:1120000, pct:25},
+];
+const capitalCalls = [
+  {date:'2021-09-01', amount:9200000, purpose:'Harborline acquisition'},
+  {date:'2022-04-15', amount:6500000, purpose:'Riverview acquisition'},
+  {date:'2023-02-01', amount:5000000, purpose:'Lofts + Court St acquisitions'},
+  {date:'2025-11-15', amount:1400000, purpose:'Rooftop amenity capex call'},
+];
+// ---------- operations ----------
+const arrears = [
+  {prop:'p2', unit:'3F', tenant:'K. Okafor', owed:3600, days:18},
+  {prop:'p4', unit:'Retail-A', tenant:'Court St. Pharmacy', owed:6200, days:42},
+  {prop:'p3', unit:'12C', tenant:'L. Nguyen', owed:2050, days:9},
+];
+const workOrders = [
+  {prop:'p1', issue:'Boiler #2 intermittent fault', priority:'High', status:'Open', opened:'2026-05-22'},
+  {prop:'p3', issue:'Garage gate sensor', priority:'Medium', status:'In Progress', opened:'2026-05-18'},
+  {prop:'p2', issue:'Roof leak — unit 4F ceiling', priority:'High', status:'In Progress', opened:'2026-05-28'},
+  {prop:'p4', issue:'Lobby light fixtures', priority:'Low', status:'Open', opened:'2026-05-30'},
+  {prop:'p1', issue:'Unit 5A faucet replacement', priority:'Low', status:'Closed', opened:'2026-05-10'},
+];
+const compliance = [
+  {prop:'p4', item:'Loan maturity (refinance window)', due:'2026-09-01'},
+  {prop:'p1', item:'Property insurance renewal', due:'2026-07-31'},
+  {prop:'p3', item:'Elevator inspection certificate', due:'2026-06-25'},
+  {prop:'p2', item:'Property tax payment (Q3)', due:'2026-08-15'},
+  {prop:'p1', item:'Property tax payment (Q3)', due:'2026-08-15'},
+];
+const documents = [
+  {prop:'p1', name:'Riverview — Loan Agreement', type:'Debt'},
+  {prop:'p1', name:'Riverview — Insurance Policy 2025-26', type:'Insurance'},
+  {prop:'p3', name:'Harborline — Rooftop GC Contract', type:'Construction'},
+  {prop:'p2', name:'Bluebird Coffee — Retail Lease', type:'Lease'},
+  {prop:'p4', name:'Court St — Appraisal 2025', type:'Valuation'},
+];
+
+// ---------- helpers ----------
+const fmt = n => (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString();
+const fmtK = n => '$'+(n/1000000).toFixed(1)+'M';
+const pct = n => n.toFixed(1)+'%';
+const daysBetween=(a,b)=>Math.round((b-a)/86400000);
+const propById=id=>properties.find(p=>p.id===id);
+function egi(id){const f=fin[id];return f&&f.income?f.income.reduce((s,r)=>s+r[1],0):0;}
+function opex(id){const f=fin[id];return f&&f.expense?f.expense.reduce((s,r)=>s+r[1],0):0;}
+function noi(id){return egi(id)-opex(id);}
+function noiBudget(id){const f=fin[id];if(!f)return 0;return (f.income||[]).reduce((s,r)=>s+r[2],0)-(f.expense||[]).reduce((s,r)=>s+r[2],0);}
+function capRate(id){const v=propById(id).value;return v?noi(id)/v*100:0;}
+function annualDS(d){
+  if(!d||!d.balance) return d&&d.ds?d.ds:0;
+  const r=(d.rate||0)/100/12;
+  if(d.amortYears && r>0){const n=d.amortYears*12; return (d.balance*r/(1-Math.pow(1+r,-n)))*12;}
+  return d.balance*(d.rate||0)/100; // interest-only fallback
+}
+function dscr(id){const ds=annualDS(debt[id]);return ds?noi(id)/ds:0;}
+function ltv(id){const v=propById(id).value;return v?debt[id].balance/v*100:0;}
+function leaseStatus(l){
+  if(!l.end) return {key:'vacant',label:'Vacant',cls:'b-gray',days:null};
+  const d=daysBetween(TODAY,new Date(l.end));
+  if(d<0) return {key:'expired',label:'Expired',cls:'b-gray',days:d};
+  if(d<90) return {key:'expiring',label:d+'d left',cls:'b-red',days:d};
+  if(d<180) return {key:'soon',label:d+'d left',cls:'b-amber',days:d};
+  return {key:'active',label:'Active',cls:'b-green',days:d};
+}
+function termLen(l){if(!l.start||!l.end)return '—';return Math.round(daysBetween(new Date(l.start),new Date(l.end))/30.44)+' mo';}
+function propStats(id){const ls=leases.filter(l=>l.prop===id);const p=propById(id);
+  const occupied=ls.filter(l=>l.end).length; const units=p.units||0;
+  return {occ:units?Math.min(100,Math.round(occupied/units*100)):0, occupied, units, rentRoll:ls.filter(l=>l.end).reduce((s,l)=>s+l.rent,0)};}
+function pStatusBadge(s){const m={'In Progress':'b-blue','Delayed':'b-red','Planned':'b-gray','Complete':'b-green','Open':'b-red','Closed':'b-green'};return `<span class="badge ${m[s]||'b-gray'}">${s}</span>`;}
+const portNOI=()=>properties.reduce((s,p)=>s+noi(p.id),0);
+const portValue=()=>properties.reduce((s,p)=>s+p.value,0);
+const portDebt=()=>properties.reduce((s,p)=>s+(debt[p.id]?debt[p.id].balance:0),0);
+const portDS=()=>properties.reduce((s,p)=>s+annualDS(debt[p.id]),0);
+
+// ---------- views ----------
+function dashboard(){
+  const totalUnits=properties.reduce((s,p)=>s+p.units,0);
+  const totalOcc=properties.reduce((s,p)=>s+propStats(p.id).occupied,0);
+  const occPct=totalUnits?Math.round(totalOcc/totalUnits*100):0;
+  const expiring=leases.filter(l=>leaseStatus(l).key==='expiring').length;
+  const pNOI=portNOI(), pVal=portValue();
+  const portDSCR=(pNOI/portDS()).toFixed(2), portLTV=(portDebt()/pVal*100).toFixed(0);
+  const rows=properties.map(p=>{const s=propStats(p.id);
+    const occCls=s.occ>=90?'b-green':s.occ>=75?'b-amber':'b-red';
+    return `<tr onclick="go('property','${p.id}')" style="cursor:pointer">
+      <td><strong>${p.name}</strong><div class="type-tag">${p.addr}</div></td>
+      <td><span class="badge b-blue">${p.type}</span></td>
+      <td class="num">${p.units}</td><td><span class="badge ${occCls}">${s.occ}%</span></td>
+      <td class="num">${fmt(noi(p.id))}</td><td class="num">${pct(capRate(p.id))}</td>
+      <td class="num">${fmtK(p.value)}</td><td>&rarr;</td></tr>`;}).join('');
+  return `<h1>Portfolio Dashboard</h1><div class="sub">Atlas Value-Add Fund I &middot; 4 assets &middot; ${totalUnits} units</div>
+  <div class="kpis">
+    <div class="kpi"><div class="label">Portfolio Value</div><div class="val">${fmtK(pVal)}</div><div class="sm">${properties.length} assets</div></div>
+    <div class="kpi"><div class="label">Annual NOI</div><div class="val">${fmtK(pNOI)}</div><div class="sm">${pct(pNOI/pVal*100)} avg cap</div></div>
+    <div class="kpi"><div class="label">Occupancy</div><div class="val ${occPct>=90?'green':'amber'}">${occPct}%</div></div>
+    <div class="kpi"><div class="label">Portfolio DSCR</div><div class="val ${portDSCR<1.25?'amber':'green'}">${portDSCR}x</div><div class="sm">${portLTV}% LTV</div></div>
+    <div class="kpi"><div class="label">Leases Exp. &lt;90d</div><div class="val ${expiring?'red':''}">${expiring}</div></div>
+  </div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>The fund is producing <strong>${fmtK(pNOI)} of NOI</strong> on ${fmtK(pVal)} of value (~${pct(pNOI/pVal*100)} blended cap) at ${portLTV}% leverage and a healthy ${portDSCR}x DSCR. Two near-term risks dominate: <strong>Court Street's floating-rate loan matures Sept 2026</strong> &mdash; refinance or rate-cap planning should be underway now &mdash; and <strong>${expiring} residential lease(s) roll within 90 days</strong>. Occupancy of ${occPct}% is held back by two vacancies, one of which (Court St 2R) is a completed renovation ready to re-list. The Harborline rooftop capex is behind schedule and affects lease-up pricing on premium units.</p></div>
+  <div class="chartgrid">
+    <div class="card"><h2>NOI by Property</h2><div class="chartbox"><canvas id="cNOI"></canvas></div></div>
+    <div class="card"><h2>Occupancy by Property</h2><div class="chartbox"><canvas id="cOcc"></canvas></div></div>
+    <div class="card"><h2>Construction: Budget vs Spent</h2><div class="chartbox"><canvas id="cCap"></canvas></div></div>
+  </div>
+  <div class="card"><h2>Properties</h2><table>
+    <thead><tr><th>Property</th><th>Type</th><th class="num">Units</th><th>Occ.</th><th class="num">NOI</th><th class="num">Cap</th><th class="num">Value</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+let _charts=[];
+function renderCharts(){
+  if(typeof Chart==='undefined')return;
+  _charts.forEach(c=>{try{c.destroy();}catch(e){}}); _charts=[];
+  const gold='#b8860b',green='#3f7d4f',line='#e3ddd0',txt='#8a8273';
+  const labels=properties.map(p=>p.name.split(' ')[0]);
+  const opts=extra=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!extra}},scales:{x:{ticks:{color:txt,font:{size:10}},grid:{display:false}},y:{ticks:{color:txt,font:{size:10}},grid:{color:line}}}});
+  const noiC=document.getElementById('cNOI'); if(noiC)_charts.push(new Chart(noiC,{type:'bar',data:{labels,datasets:[{label:'NOI',data:properties.map(p=>noi(p.id)),backgroundColor:gold,borderRadius:5}]},options:opts(false)}));
+  const occC=document.getElementById('cOcc'); if(occC)_charts.push(new Chart(occC,{type:'bar',data:{labels,datasets:[{label:'Occupancy %',data:properties.map(p=>propStats(p.id).occ),backgroundColor:green,borderRadius:5}]},options:{...opts(false),scales:{...opts(false).scales,y:{...opts(false).scales.y,max:100}}}}));
+  const capC=document.getElementById('cCap'); if(capC){const labs=projects.map(p=>p.name.split(' ').slice(0,2).join(' '));
+    _charts.push(new Chart(capC,{type:'bar',data:{labels:labs,datasets:[{label:'Budget',data:projects.map(p=>p.budget),backgroundColor:line},{label:'Spent',data:projects.map(p=>p.spent),backgroundColor:gold,borderRadius:4}]},options:opts(true)}));}
+}
+
+let finProp='all', finMode='summary';
+function financials(){
+  const pb=(k,lbl)=>`<button class="${finProp===k?'active':''}" onclick="setFin('${k}')">${lbl}</button>`;
+  let body='';
+  if(finMode==='summary'){
+    const rows=properties.map(p=>{const v=noi(p.id)-noiBudget(p.id);
+      return `<tr onclick="go('property','${p.id}')" style="cursor:pointer"><td><strong>${p.name}</strong></td>
+        <td class="num">${fmt(egi(p.id))}</td><td class="num">${fmt(opex(p.id))}</td>
+        <td class="num"><strong>${fmt(noi(p.id))}</strong></td>
+        <td class="num ${v>=0?'var-pos':'var-neg'}">${v>=0?'+':''}${fmt(v)}</td>
+        <td class="num">${pct(capRate(p.id))}</td></tr>`;}).join('');
+    const tv=portNOI()-properties.reduce((s,p)=>s+noiBudget(p.id),0);
+    body=`<div class="card"><h2>NOI Summary &mdash; all assets</h2><table>
+      <thead><tr><th>Property</th><th class="num">EGI</th><th class="num">OpEx</th><th class="num">NOI</th><th class="num">vs Budget</th><th class="num">Cap</th></tr></thead>
+      <tbody>${rows}<tr class="pl-noi"><td>Portfolio Total</td><td class="num">${fmt(properties.reduce((s,p)=>s+egi(p.id),0))}</td>
+      <td class="num">${fmt(properties.reduce((s,p)=>s+opex(p.id),0))}</td><td class="num">${fmt(portNOI())}</td>
+      <td class="num ${tv>=0?'var-pos':'var-neg'}">${tv>=0?'+':''}${fmt(tv)}</td><td class="num">${pct(portNOI()/portValue()*100)}</td></tr></tbody></table></div>`;
+  } else {
+    const id = finProp==='all'?'p1':finProp;
+    const p=propById(id), f=fin[id];
+    const lineRow=(type,r,i)=>{const sign=type==='expense'?-1:1;const a=sign*r[1],b=sign*r[2],v=a-b;
+      return `<tr class="pl-sub"><td>${r[0]}</td><td class="num">${fmt(a)}</td><td class="num">${fmt(b)}</td><td class="num ${v>=0?'var-pos':'var-neg'}">${v>=0?'+':''}${fmt(v)}</td><td class="num rowact"><a onclick="editLine('${id}','${type}',${i})">Edit</a> &middot; <a onclick="deleteLine('${id}','${type}',${i})">Del</a></td></tr>`;};
+    const incRows=f.income.map((r,i)=>lineRow('income',r,i)).join('');
+    const expRows=f.expense.map((r,i)=>lineRow('expense',r,i)).join('');
+    const egiA=egi(id),egiB=f.income.reduce((s,r)=>s+r[2],0);
+    const opA=opex(id),opB=f.expense.reduce((s,r)=>s+r[2],0);
+    body=`<div class="card"><h2><span>${p.name} &mdash; Operating Statement (annual)</h2><span style="display:flex;gap:8px"><button class="addbtn" onclick="addLine('${id}','income')">+ Income</button><button class="addbtn" onclick="addLine('${id}','expense')">+ Expense</button></span></h2><table>
+      <thead><tr><th>Line Item</th><th class="num">Actual</th><th class="num">Budget</th><th class="num">Variance</th><th></th></tr></thead><tbody>
+      ${incRows}
+      <tr class="pl-total"><td>Effective Gross Income</td><td class="num">${fmt(egiA)}</td><td class="num">${fmt(egiB)}</td><td class="num ${egiA-egiB>=0?'var-pos':'var-neg'}">${egiA-egiB>=0?'+':''}${fmt(egiA-egiB)}</td><td></td></tr>
+      ${expRows}
+      <tr class="pl-total"><td>Total Operating Expenses</td><td class="num">${fmt(-opA)}</td><td class="num">${fmt(-opB)}</td><td class="num ${(opB-opA)>=0?'var-pos':'var-neg'}">${(opB-opA)>=0?'+':''}${fmt(opB-opA)}</td><td></td></tr>
+      <tr class="pl-noi"><td>Net Operating Income</td><td class="num">${fmt(noi(id))}</td><td class="num">${fmt(noiBudget(id))}</td><td class="num ${noi(id)-noiBudget(id)>=0?'var-pos':'var-neg'}">${noi(id)-noiBudget(id)>=0?'+':''}${fmt(noi(id)-noiBudget(id))}</td><td></td></tr>
+      </tbody></table></div>`;
+  }
+  return `<h1>P&amp;L / NOI</h1><div class="sub">Income and expenses roll up to Net Operating Income &mdash; the basis for value and returns.</div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>NOI is the engine of value: at the portfolio's blended cap rate, every $10k of recurring NOI is worth roughly $180k of value. Watch <strong>vacancy loss and R&amp;M overruns</strong> against budget &mdash; those are the line items where value-add execution shows up. The Summary tab compares all assets; switch to Line-Item P&amp;L to drill into one property's budget variance.</p></div>
+  <div class="card"><h2><span>View</span><span class="toggle"><button class="${finMode==='summary'?'active':''}" onclick="setFinMode('summary')">Summary</button><button class="${finMode==='line'?'active':''}" onclick="setFinMode('line')">Line-Item P&amp;L</button></span></h2>
+  ${finMode==='line'?`<div class="filters">${properties.map(p=>`<button class="${(finProp===p.id||(finProp==='all'&&p.id==='p1'))?'active':''}" onclick="setFin('${p.id}')">${p.name}</button>`).join('')}</div>`:''}</div>
+  ${body}`;
+}
+function setFin(k){finProp=k;render('financials');}
+function setFinMode(m){finMode=m;render('financials');}
+
+function debtView(){
+  const rows=properties.map(p=>{const d=debt[p.id]||{lender:'—',type:'—',balance:0,rate:0,maturity:'—',amortYears:0};
+    const dleft=daysBetween(TODAY,new Date(d.maturity));
+    const matCls=dleft<180?'b-red':dleft<365?'b-amber':'b-green';
+    const ds=dscr(p.id),dscrCls=ds<1.25?'b-amber':'b-green';
+    const amort=d.amortYears?d.amortYears+'yr amort':'Interest-only';
+    return `<tr><td><strong>${p.name}</strong><div class="type-tag">${d.lender} &middot; ${d.type} &middot; ${amort}</div></td>
+      <td class="num">${fmt(d.balance)}</td><td class="num">${d.rate}%</td>
+      <td class="num">${fmt(annualDS(d))}</td>
+      <td class="num"><span class="badge ${ltv(p.id)>70?'b-amber':'b-green'}">${ltv(p.id).toFixed(0)}%</span></td>
+      <td class="num"><span class="badge ${dscrCls}">${ds.toFixed(2)}x</span></td>
+      <td><span class="badge ${matCls}">${d.maturity}</span></td>
+      <td class="num rowact"><a onclick="editDebt('${p.id}')">Edit</a></td></tr>`;}).join('');
+  const retRows=properties.map(p=>{const v=noi(p.id)-p.uwNOI;const gain=p.value-p.acqPrice;
+    return `<tr onclick="go('property','${p.id}')" style="cursor:pointer"><td><strong>${p.name}</strong><div class="type-tag">Acq ${p.acqDate} &middot; ${p.strategy}</div></td>
+      <td class="num">${fmt(p.acqPrice)}</td><td class="num">${fmt(p.value)}</td>
+      <td class="num ${gain>=0?'var-pos':'var-neg'}">${gain>=0?'+':''}${fmt(gain)}</td>
+      <td class="num">${fmt(p.uwNOI)}</td><td class="num">${fmt(noi(p.id))}</td>
+      <td class="num ${v>=0?'var-pos':'var-neg'}">${v>=0?'+':''}${fmt(v)}</td></tr>`;}).join('');
+  return `<h1>Debt &amp; Returns</h1><div class="sub">Leverage, coverage, maturities, and performance vs. acquisition underwriting.</div>
+  <div class="read"><h3>Asset Manager's Read</h3><p><strong>Court Street's floating-rate loan matures in Sept 2026</strong> at the highest rate in the book (6.40%) &mdash; it's the top capital-markets priority; model a refinance and a rate-cap. Coverage is comfortable elsewhere (DSCR &gt; 1.25x). On execution, three of four assets are <strong>beating their underwritten NOI</strong>, with the Lofts the laggard pending retail re-tenanting. Value growth over basis reflects both NOI gains and cap-rate-driven appreciation.</p></div>
+  <div class="card"><h2>Debt Schedule</h2><table>
+    <thead><tr><th>Property / Loan</th><th class="num">Balance</th><th class="num">Rate</th><th class="num">Debt Svc/yr</th><th class="num">LTV</th><th class="num">DSCR</th><th>Maturity</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+  <div class="card"><h2>Performance vs. Underwriting</h2><table>
+    <thead><tr><th>Property</th><th class="num">Basis</th><th class="num">Value</th><th class="num">&Delta; Value</th><th class="num">UW NOI</th><th class="num">Actual NOI</th><th class="num">&Delta; NOI</th></tr></thead>
+    <tbody>${retRows}</tbody></table></div>`;
+}
+
+function investorsView(){
+  const cap=['#1f3d2f','#3f7d4f','#b8860b','#c0851a'];
+  const stack=investors.map((v,i)=>`<span style="width:${v.pct}%;background:${cap[i]}">${v.pct}%</span>`).join('');
+  const rows=investors.map(v=>`<tr><td><strong>${v.name}</strong> <span class="badge ${v.role==='GP'?'b-blue':'b-gray'}">${v.role}</span></td>
+    <td class="num">${fmt(v.commit)}</td><td class="num">${fmt(v.called)}</td><td class="num">${fmt(v.dist)}</td>
+    <td class="num">${v.pct}%</td><td class="num">${(v.called?v.dist/v.called:0).toFixed(2)}x</td></tr>`).join('');
+  const calls=capitalCalls.map(c=>`<tr><td>${c.date}</td><td class="num">${fmt(c.amount)}</td><td>${c.purpose}</td></tr>`).join('');
+  const dpi=(fund.distributed/fund.called).toFixed(2);
+  return `<h1>Investors &amp; Capital</h1><div class="sub">${fund.name} &middot; cap table, capital calls, and distributions.</div>
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="label">Committed Equity</div><div class="val">${fmtK(fund.committed)}</div></div>
+    <div class="kpi"><div class="label">Capital Called</div><div class="val">${fmtK(fund.called)}</div><div class="sm">${pct(fund.called/fund.committed*100)} of commitment</div></div>
+    <div class="kpi"><div class="label">Distributed</div><div class="val">${fmtK(fund.distributed)}</div></div>
+    <div class="kpi"><div class="label">DPI</div><div class="val">${dpi}x</div><div class="sm">distributions / paid-in</div></div>
+  </div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>${pct(fund.called/fund.committed*100)} of committed equity is deployed, leaving roughly ${fmtK(fund.committed-fund.called)} of dry powder for capex and reserves. DPI of ${dpi}x reflects early operating distributions; the bulk of LP return is back-ended to a refinance or sale event. Keep LPs informed ahead of the Court St refinance, which may affect distribution timing.</p></div>
+  <div class="card"><h2>Ownership</h2><div style="padding:14px 18px"><div class="stack">${stack}</div></div>
+    <table><thead><tr><th>Investor</th><th class="num">Commitment</th><th class="num">Called</th><th class="num">Distributed</th><th class="num">Ownership</th><th class="num">DPI</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="card"><h2>Capital Call History</h2><table><thead><tr><th>Date</th><th class="num">Amount</th><th>Purpose</th></tr></thead><tbody>${calls}</tbody></table></div>`;
+}
+
+let leaseFilter='all', leaseProp='all';
+function leasesView(){
+  const f=leaseFilter;
+  const propsToShow=leaseProp==='all'?properties:properties.filter(p=>p.id===leaseProp);
+  const sb=(k,lbl)=>`<button class="${leaseFilter===k?'active':''}" onclick="setLeaseFilter('${k}')">${lbl}</button>`;
+  const pbn=(k,lbl)=>`<button class="${leaseProp===k?'active':''}" onclick="setLeaseProp('${k}')">${lbl}</button>`;
+  const cards=propsToShow.map(p=>{
+    let list=leases.filter(l=>l.prop===p.id).map(l=>({...l,_s:leaseStatus(l)}));
+    if(f!=='all') list=list.filter(l=>f==='expiring'?(l._s.key==='expiring'||l._s.key==='soon'):l._s.key===f);
+    list.sort((a,b)=>(a._s.days??99999)-(b._s.days??99999));
+    const s=propStats(p.id);
+    const rows=list.length?list.map(l=>`<tr>
+      <td>${l.unit}</td><td><strong>${l.tenant}</strong><div class="type-tag">${l.kind}</div></td>
+      <td>${l.start||'&mdash;'}</td><td>${l.end||'&mdash;'}</td><td>${termLen(l)}</td>
+      <td class="num">${fmt(l.rent)}</td><td><span class="badge ${l._s.cls}">${l._s.label}</span></td>
+      <td class="num rowact"><a onclick="editLease('${l._id}')">Edit</a> &middot; <a onclick="deleteLease('${l._id}')">Del</a></td></tr>`).join('')
+      :`<tr><td colspan="8" class="muted">No leases match this filter.</td></tr>`;
+    return `<div class="card"><h2><span>${p.name} <span class="type-tag" style="font-weight:400">&middot; ${s.occ}% occ &middot; ${fmt(s.rentRoll)}/mo</span></span>
+      <button class="addbtn" onclick="addLease('${p.id}')">+ Add Lease</button></h2>
+      <table><thead><tr><th>Unit</th><th>Tenant</th><th>Start</th><th>End</th><th>Term</th><th class="num">Rent</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  return `<h1 style="display:flex;justify-content:space-between;align-items:center">Lease Tracking<span style="display:flex;gap:8px">
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importLeasesCSV(this)">
+    <button class="addbtn" onclick="document.getElementById('csvInput').click()">&uarr; Import CSV</button>
+    <button class="addbtn" style="background:var(--chip);color:var(--txt);border:1px solid var(--line)" onclick="exportLeasesCSV()">&darr; Export CSV</button>
+    <button class="addbtn" style="background:var(--chip);color:var(--txt);border:1px solid var(--line)" onclick="downloadLeaseTemplate()">Template</button>
+  </span></h1><div class="sub">Grouped by property. Term and expiry auto-calculated against ${TODAY.toISOString().slice(0,10)}.</div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>Flags are time-to-expiry: <span class="badge b-red">red &lt;90d</span> <span class="badge b-amber">amber 90-180d</span> <span class="badge b-green">green &gt;180d</span>. Onboarding a new asset? <strong>Download the template</strong>, fill the rent roll in Excel, and <strong>Import CSV</strong> to load every unit at once instead of one-by-one.</p></div>
+  <div class="card"><div class="filters">${pbn('all','All Properties')}${properties.map(p=>pbn(p.id,p.name)).join('')}</div>
+  <div class="filters">${sb('all','All')}${sb('expiring','Expiring &le;180d')}${sb('active','Active')}${sb('vacant','Vacant')}</div></div>
+  ${cards}`;
+}
+function setLeaseFilter(k){leaseFilter=k;render('leases');}
+function setLeaseProp(k){leaseProp=k;render('leases');}
+// ---------- CSV import / export ----------
+function parseCSV(text){
+  const rows=[]; text=text.replace(/\r/g,'');
+  text.split('\n').forEach(line=>{
+    if(!line.trim())return;
+    const cells=[]; let cur='',q=false;
+    for(let i=0;i<line.length;i++){const c=line[i];
+      if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}
+      else if(c===','&&!q){cells.push(cur);cur='';}
+      else cur+=c;}
+    cells.push(cur); rows.push(cells.map(s=>s.trim()));
+  });
+  return rows;
+}
+function resolveProp(v){
+  if(!v)return null; const t=v.toLowerCase();
+  const p=properties.find(p=>p.id.toLowerCase()===t||p.name.toLowerCase()===t||p.name.toLowerCase().startsWith(t));
+  return p?p.id:null;
+}
+function importLeasesCSV(input){
+  const file=input.files&&input.files[0]; if(!file)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const rows=parseCSV(e.target.result); if(rows.length<2){alert('CSV looks empty.');return;}
+      const head=rows[0].map(h=>h.toLowerCase().replace(/[^a-z]/g,''));
+      const col=n=>head.indexOf(n);
+      const ci={prop:col('property')>=0?col('property'):col('propertyid'),unit:col('unit'),tenant:col('tenant'),kind:col('type')>=0?col('type'):col('kind'),start:col('start')>=0?col('start'):col('startdate'),end:col('end')>=0?col('end'):col('enddate'),rent:col('rent')>=0?col('rent'):col('monthlyrent'),dep:col('deposit')};
+      if(ci.prop<0||ci.unit<0){alert('CSV must include at least Property and Unit columns. Use the Template.');return;}
+      let added=0,skipped=0;
+      rows.slice(1).forEach(c=>{
+        const pid=resolveProp(c[ci.prop]); if(!pid){skipped++;return;}
+        leases.push({prop:pid,unit:c[ci.unit]||'',tenant:(ci.tenant>=0?c[ci.tenant]:'')||'VACANT',
+          kind:(ci.kind>=0&&c[ci.kind])?c[ci.kind]:'Residential',
+          start:ci.start>=0?c[ci.start]:'',end:ci.end>=0?c[ci.end]:'',
+          rent:ci.rent>=0?(+String(c[ci.rent]).replace(/[^0-9.\-]/g,'')||0):0,
+          dep:ci.dep>=0?(+String(c[ci.dep]).replace(/[^0-9.\-]/g,'')||0):0,
+          _id:'L'+(nextLeaseId++)});
+        added++;
+      });
+      saveData(); render('leases');
+      alert('Imported '+added+' lease(s).'+(skipped?' Skipped '+skipped+' row(s) with an unrecognized property.':''));
+    }catch(err){alert('Could not parse that CSV: '+err.message);}
+  };
+  r.readAsText(file); input.value='';
+}
+function downloadCSV(name,text){
+  const blob=new Blob([text],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+}
+function downloadLeaseTemplate(){
+  const t='Property,Unit,Tenant,Type,Start,End,Rent,Deposit\n'+
+    'Riverview Apartments,12A,Jane Doe,Residential,2025-01-01,2026-12-31,3200,3200\n'+
+    'Riverview Apartments,12B,,Residential,,,3100,0\n';
+  downloadCSV('lease_import_template.csv',t);
+}
+function exportLeasesCSV(){
+  const esc=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  let out='Property,Unit,Tenant,Type,Start,End,Rent,Deposit\n';
+  leases.forEach(l=>{out+=[propById(l.prop)?propById(l.prop).name:l.prop,l.unit,l.tenant,l.kind,l.start,l.end,l.rent,l.dep].map(esc).join(',')+'\n';});
+  downloadCSV('rent_roll_export.csv',out);
+}
+
+function constructionView(){
+  const dated=projects.filter(p=>p.start&&p.target&&!isNaN(new Date(p.start))&&!isNaN(new Date(p.target)));
+  const dates=dated.flatMap(p=>[new Date(p.start),new Date(p.target)]);
+  const min=dates.length?new Date(Math.min(...dates)):TODAY,max=dates.length?new Date(Math.max(...dates)):TODAY;
+  const span=Math.max(daysBetween(min,max),1);
+  const gantt=dated.length?dated.map(p=>{const s=new Date(p.start),e=new Date(p.target);
+    const left=daysBetween(min,s)/span*100,width=Math.max(daysBetween(s,e)/span*100,4);
+    const overdue=p.status!=='Complete'&&e<TODAY;
+    return `<div class="gantt-row"><div>${p.name}<div class="type-tag">${propById(p.prop).name}</div></div>
+      <div class="gantt-track"><div class="gantt-fill" style="left:${left}%;width:${width}%;${overdue?'background:linear-gradient(90deg,#9a2f1c,#c0492f)':''}">${p.pct}%</div></div></div>`;}).join(''):'<div style="padding:14px 18px" class="muted">No dated projects to chart.</div>';
+  const rows=projects.map(p=>{const overdue=p.status!=='Complete'&&new Date(p.target)<TODAY;
+    const over=p.spent>p.budget; const rem=p.budget-p.spent;
+    return `<tr><td><strong>${p.name}</strong><div class="type-tag">${p.scope}</div></td><td>${propById(p.prop).name}</td>
+      <td class="num">${fmt(p.budget)}</td><td class="num ${over?'var-neg':''}">${fmt(p.spent)}</td>
+      <td class="num ${rem<0?'var-neg':'var-pos'}">${fmt(rem)}</td>
+      <td>${p.target}${overdue?' &#9888;':''}</td>
+      <td><div class="bar"><i style="width:${p.pct}%"></i></div> ${p.pct}%</td><td>${pStatusBadge(p.status)}</td>
+      <td class="num rowact"><a onclick="editProject('${p._id}')">Edit</a> &middot; <a onclick="deleteProject('${p._id}')">Del</a></td></tr>`;}).join('');
+  const totBudget=projects.reduce((s,p)=>s+p.budget,0), totSpent=projects.reduce((s,p)=>s+p.spent,0);
+  return `<h1>Construction &amp; Capital Projects</h1><div class="sub">Renovation and build-out tracking across the portfolio.</div>
+  <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="label">Total Budget</div><div class="val">${fmtK(totBudget)}</div></div>
+    <div class="kpi"><div class="label">Spent to Date</div><div class="val">${fmtK(totSpent)}</div><div class="sm">${totBudget?Math.round(totSpent/totBudget*100):0}% of budget</div></div>
+    <div class="kpi"><div class="label">Remaining</div><div class="val ${totBudget-totSpent<0?'red':''}">${fmtK(totBudget-totSpent)}</div></div>
+    <div class="kpi"><div class="label">Active Projects</div><div class="val">${projects.filter(p=>p.status==='In Progress'||p.status==='Delayed').length}</div></div>
+  </div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>Track <strong>cost-to-date against budget</strong> &mdash; the Court St unit turn ran over (spent &gt; budget), a margin hit to watch on future scopes. The Harborline rooftop is delayed past its target; amenity delivery drives premium pricing on upper units. Use <strong>+ Add Project</strong> or the Edit links to manage scopes, budgets, costs, and progress.</p></div>
+  <div class="card"><h2>Timeline</h2>${gantt}</div>
+  <div class="card"><h2><span>Project Detail</span><button class="addbtn" onclick="addProject()">+ Add Project</button></h2><table><thead><tr><th>Project</th><th>Property</th><th class="num">Budget</th><th class="num">Spent</th><th class="num">Remaining</th><th>Target</th><th>Progress</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function opsView(){
+  const arRows=arrears.map(a=>`<tr><td><strong>${a.tenant}</strong><div class="type-tag">${propById(a.prop).name} &middot; ${a.unit}</div></td>
+    <td class="num">${fmt(a.owed)}</td><td class="num"><span class="badge ${a.days>30?'b-red':'b-amber'}">${a.days}d</span></td></tr>`).join('');
+  const totalAr=arrears.reduce((s,a)=>s+a.owed,0);
+  const woRows=workOrders.map(w=>`<tr><td>${w.issue}</td><td>${propById(w.prop).name}</td>
+    <td><span class="badge ${w.priority==='High'?'b-red':w.priority==='Medium'?'b-amber':'b-gray'}">${w.priority}</span></td>
+    <td>${pStatusBadge(w.status)}</td><td>${w.opened}</td></tr>`).join('');
+  const compRows=compliance.map(c=>({...c,d:daysBetween(TODAY,new Date(c.due))})).sort((a,b)=>a.d-b.d)
+    .map(c=>`<tr><td>${c.item}</td><td>${propById(c.prop).name}</td><td>${c.due}</td>
+    <td><span class="badge ${c.d<30?'b-red':c.d<90?'b-amber':'b-green'}">${c.d}d</span></td></tr>`).join('');
+  const docRows=documents.map(d=>`<tr><td>${d.name}</td><td>${propById(d.prop).name}</td><td><span class="badge b-gray">${d.type}</span></td></tr>`).join('');
+  return `<h1>Operations &amp; Compliance</h1><div class="sub">Arrears, work orders, key dates, and document repository.</div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>Outstanding arrears total <strong>${fmt(totalAr)}</strong>, led by the Court St retail tenant at 42 days &mdash; escalate before it threatens the lease. On compliance, the closest hard date is the Harborline elevator certificate; the Court St loan maturity also lives here as a capital-markets deadline. Two high-priority work orders (boiler, roof leak) carry tenant-impact risk.</p></div>
+  <div class="grid2">
+    <div class="card"><h2>Arrears / Delinquency</h2><table><thead><tr><th>Tenant</th><th class="num">Owed</th><th class="num">Late</th></tr></thead><tbody>${arRows}</tbody></table></div>
+    <div class="card"><h2>Upcoming Key Dates</h2><table><thead><tr><th>Item</th><th>Property</th><th>Due</th><th class="num">In</th></tr></thead><tbody>${compRows}</tbody></table></div>
+  </div>
+  <div class="card"><h2>Work Orders</h2><table><thead><tr><th>Issue</th><th>Property</th><th>Priority</th><th>Status</th><th>Opened</th></tr></thead><tbody>${woRows}</tbody></table></div>
+  <div class="card"><h2>Document Repository</h2><table><thead><tr><th>Document</th><th>Property</th><th>Type</th></tr></thead><tbody>${docRows}</tbody></table></div>`;
+}
+
+function propertiesView(){
+  const rows=properties.map(p=>{const s=propStats(p.id);
+    return `<tr onclick="go('property','${p.id}')" style="cursor:pointer">
+      <td><strong>${p.name}</strong><div class="type-tag">${p.addr}</div></td>
+      <td><span class="badge b-blue">${p.type}</span></td><td class="num">${p.year}</td><td class="num">${p.units}</td>
+      <td class="num">${s.occ}%</td><td class="num">${fmt(noi(p.id))}</td><td class="num">${fmtK(p.value)}</td><td class="rowact"><a onclick="event.stopPropagation();editProperty('${p.id}')">Edit</a></td></tr>`;}).join('');
+  return `<h1>Properties</h1><div class="sub">Click any asset for its full profile, or Edit to update its details.</div>
+  <div class="card"><h2><span>Portfolio</span><button class="addbtn" onclick="addProperty()">+ Add Property</button></h2><table><thead><tr><th>Property</th><th>Type</th><th class="num">Built</th><th class="num">Units</th><th class="num">Occ.</th><th class="num">NOI</th><th class="num">Value</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function propertyDetail(id){
+  const p=propById(id),s=propStats(id),d=debt[id]||{maturity:'—',rate:0,lender:'—'};
+  const lsArr=leases.filter(l=>l.prop===id);
+  const ls=lsArr.length?lsArr.map(l=>{const st=leaseStatus(l);
+    return `<tr><td>${l.unit}</td><td>${l.tenant}</td><td>${l.end||'&mdash;'}</td><td class="num">${fmt(l.rent)}</td><td><span class="badge ${st.cls}">${st.label}</span></td></tr>`;}).join(''):`<tr><td colspan="5" class="muted">No leases yet — add them in the Leases section.</td></tr>`;
+  const pr=projects.filter(x=>x.prop===id);
+  const prRows=pr.length?pr.map(x=>`<tr><td>${x.name}</td><td class="num">${fmt(x.budget)}</td><td class="num">${fmt(x.spent)}</td><td>${x.target}</td><td>${pStatusBadge(x.status)}</td></tr>`).join(''):`<tr><td colspan="5" class="muted">No active projects.</td></tr>`;
+  return `<a class="back" onclick="go('properties')">&larr; Properties</a>
+  <h1 style="display:flex;justify-content:space-between;align-items:center">${p.name}<button class="addbtn" onclick="editProperty('${id}')">Edit details</button></h1><div class="sub">${p.addr} &middot; ${p.type} &middot; Built ${p.year} &middot; ${p.strategy}</div>
+  <div class="kpis">
+    <div class="kpi"><div class="label">Value</div><div class="val">${fmtK(p.value)}</div><div class="sm">basis ${fmtK(p.acqPrice)}</div></div>
+    <div class="kpi"><div class="label">NOI</div><div class="val">${fmt(noi(id))}</div><div class="sm">${pct(capRate(id))} cap</div></div>
+    <div class="kpi"><div class="label">Occupancy</div><div class="val ${s.occ>=90?'green':'amber'}">${s.occ}%</div><div class="sm">${s.occupied}/${s.units} units</div></div>
+    <div class="kpi"><div class="label">DSCR</div><div class="val ${dscr(id)<1.25?'amber':'green'}">${dscr(id).toFixed(2)}x</div><div class="sm">${ltv(id).toFixed(0)}% LTV</div></div>
+    <div class="kpi"><div class="label">Loan <a onclick="editDebt('${id}')" style="font-size:11px">Edit</a></div><div class="val" style="font-size:16px">${d.maturity}</div><div class="sm">${d.rate}% &middot; ${d.lender}</div></div>
+  </div>
+  <div class="read"><h3>Business Plan</h3><p>${p.thesis} Acquired ${p.acqDate} on a ${p.holdYears}-year hold. Underwritten NOI ${fmt(p.uwNOI)} vs. ${fmt(noi(id))} actual &mdash; ${noi(id)>=p.uwNOI?'<strong>ahead of plan.</strong>':'<strong>behind plan; focus on income upside.</strong>'}</p></div>
+  <div class="grid2">
+    <div class="card"><h2>Leases</h2><table><thead><tr><th>Unit</th><th>Tenant</th><th>End</th><th class="num">Rent</th><th>Status</th></tr></thead><tbody>${ls}</tbody></table></div>
+    <div class="card"><h2>Construction</h2><table><thead><tr><th>Project</th><th class="num">Budget</th><th class="num">Spent</th><th>Target</th><th>Status</th></tr></thead><tbody>${prRows}</tbody></table></div>
+  </div>`;
+}
+
+// ---------- persistence + editing ----------
+let nextLeaseId=1, nextPropId=5;
+let nextProjId=1;
+function initData(){
+  try{
+    const s=JSON.parse(localStorage.getItem('atlasAM')||'null');
+    if(s){
+      if(s.properties){properties.length=0;s.properties.forEach(p=>properties.push(p));}
+      if(s.leases){leases.length=0;s.leases.forEach(l=>leases.push(l));}
+      if(s.projects){projects.length=0;s.projects.forEach(x=>projects.push(x));}
+      if(s.debt)Object.assign(debt,s.debt);
+      nextLeaseId=s.nextLeaseId||nextLeaseId; nextPropId=s.nextPropId||nextPropId; nextProjId=s.nextProjId||nextProjId;
+    }
+  }catch(e){}
+  // guarantee stable ids (covers older saved data)
+  leases.forEach(l=>{if(!l._id)l._id='L'+(nextLeaseId++);});
+  projects.forEach(x=>{if(!x._id)x._id='J'+(nextProjId++); if(x.spent==null)x.spent=0;});
+  // backfill financial/debt records for any property missing them (prevents NOI crashes)
+  properties.forEach(p=>{
+    if(!fin[p.id])fin[p.id]={income:[['Gross Potential Rent',0,0]],expense:[['Property Tax',0,0]]};
+    if(!debt[p.id])debt[p.id]={lender:'TBD',balance:0,rate:0,amortYears:30,type:'Fixed',maturity:TODAY.toISOString().slice(0,10)};
+    if(p.uwNOI==null)p.uwNOI=0; if(!p.acqDate)p.acqDate=TODAY.toISOString().slice(0,10);
+    if(p.holdYears==null)p.holdYears=5; if(!p.thesis)p.thesis='—'; if(!p.strategy)p.strategy='Value-add';
+  });
+}
+function saveData(){try{localStorage.setItem('atlasAM',JSON.stringify({properties,leases,projects,debt,nextLeaseId,nextPropId,nextProjId}));}catch(e){}}
+function resetData(){if(confirm('Reset all data back to the original demo?')){try{localStorage.removeItem('atlasAM');}catch(e){}location.reload();}}
+
+function modal(title,fields,onsave){
+  const body=fields.map(f=>{
+    if(f.type==='select')return `<label>${f.label}<select data-k="${f.key}">${f.options.map(o=>`<option ${o==f.value?'selected':''}>${o}</option>`).join('')}</select></label>`;
+    return `<label>${f.label}<input data-k="${f.key}" type="${f.type||'text'}" value="${(f.value??'').toString().replace(/"/g,'&quot;')}"></label>`;
+  }).join('');
+  const m=document.getElementById('modal');
+  m.querySelector('.m-title').textContent=title;
+  m.querySelector('.m-body').innerHTML=body;
+  m.style.display='flex'; m._onsave=onsave;
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function submitModal(){
+  const m=document.getElementById('modal'); const data={};
+  m.querySelectorAll('[data-k]').forEach(el=>data[el.dataset.k]=el.value);
+  m._onsave(data); closeModal(); saveData();
+}
+
+function leaseForm(l){
+  modal(l._id?'Edit Lease':'Add Lease',[
+    {key:'unit',label:'Unit',value:l.unit},
+    {key:'tenant',label:'Tenant (use VACANT if empty)',value:l.tenant},
+    {key:'kind',label:'Type',type:'select',value:l.kind,options:['Residential','Retail','Office','Commercial']},
+    {key:'start',label:'Lease start',type:'date',value:l.start},
+    {key:'end',label:'Lease end (blank = vacant)',type:'date',value:l.end},
+    {key:'rent',label:'Monthly rent ($)',type:'number',value:l.rent},
+    {key:'dep',label:'Security deposit ($)',type:'number',value:l.dep},
+  ],data=>{
+    data.rent=+data.rent||0; data.dep=+data.dep||0;
+    if(l._id)Object.assign(l,data);
+    else leases.push({...data,prop:l.prop,_id:'L'+(nextLeaseId++)});
+    render('leases');
+  });
+}
+function editLease(id){leaseForm(leases.find(x=>x._id===id));}
+function addLease(prop){leaseForm({prop,unit:'',tenant:'',start:'',end:'',rent:0,dep:0,kind:'Residential'});}
+function deleteLease(id){if(confirm('Delete this lease?')){leases.splice(leases.findIndex(x=>x._id===id),1);saveData();render('leases');}}
+
+function propForm(p,isNew){
+  modal(isNew?'Add Property':'Edit Property',[
+    {key:'name',label:'Name',value:p.name},
+    {key:'addr',label:'Address',value:p.addr},
+    {key:'type',label:'Type',type:'select',value:p.type,options:['Multifamily','Mixed-Use','Office','Retail']},
+    {key:'units',label:'Units',type:'number',value:p.units},
+    {key:'year',label:'Year built',type:'number',value:p.year},
+    {key:'value',label:'Current value ($)',type:'number',value:p.value},
+    {key:'acqPrice',label:'Acquisition basis ($)',type:'number',value:p.acqPrice},
+    {key:'strategy',label:'Strategy',type:'select',value:p.strategy,options:['Core','Core-plus','Value-add','Opportunistic']},
+    {key:'holdYears',label:'Hold period (years)',type:'number',value:p.holdYears},
+    {key:'exitCap',label:'Exit cap rate (%)',type:'number',value:p.exitCap??''},
+  ],data=>{
+    ['units','year','value','acqPrice','holdYears','exitCap'].forEach(k=>data[k]=+data[k]||0);
+    if(isNew){
+      const id='p'+(nextPropId++);
+      properties.push({id,acqDate:TODAY.toISOString().slice(0,10),thesis:'New acquisition.',uwNOI:0,...data});
+      fin[id]={income:[['Gross Potential Rent',0,0]],expense:[['Property Tax',0,0]]};
+      debt[id]={lender:'TBD',balance:0,rate:0,type:'TBD',maturity:TODAY.toISOString().slice(0,10),ds:1};
+      render('properties');
+    }else{Object.assign(p,data);render('property',p.id);}
+  });
+}
+function editProperty(id){propForm(propById(id),false);}
+function addProperty(){propForm({name:'',addr:'',type:'Multifamily',units:0,year:2020,value:0,acqPrice:0,strategy:'Value-add'},true);}
+
+function editDebt(id){
+  const d=debt[id]||{lender:'',balance:0,rate:0,amortYears:30,type:'Fixed',maturity:''};
+  modal('Loan / Financing — '+propById(id).name,[
+    {key:'lender',label:'Lender',value:d.lender},
+    {key:'balance',label:'Loan amount / balance ($)',type:'number',value:d.balance},
+    {key:'rate',label:'Interest rate (% annual)',type:'number',value:d.rate},
+    {key:'amortYears',label:'Amortization (years; 0 = interest-only)',type:'number',value:d.amortYears||0},
+    {key:'type',label:'Loan type',type:'select',value:d.type,options:['Fixed','Floating, SOFR+250','Interest-only','Bridge','Construction']},
+    {key:'maturity',label:'Maturity date',type:'date',value:d.maturity},
+  ],data=>{
+    ['balance','rate','amortYears'].forEach(k=>data[k]=+data[k]||0);
+    debt[id]=Object.assign(debt[id]||{},data);
+    render('property',id);
+  });
+}
+
+function projForm(x,isNew){
+  modal(isNew?'Add Construction Project':'Edit Project',[
+    {key:'prop',label:'Property',type:'select',value:propById(x.prop).name,options:properties.map(p=>p.name)},
+    {key:'name',label:'Project name',value:x.name},
+    {key:'scope',label:'Scope / description',value:x.scope},
+    {key:'budget',label:'Total budget ($)',type:'number',value:x.budget},
+    {key:'spent',label:'Cost incurred to date ($)',type:'number',value:x.spent},
+    {key:'pct',label:'% complete',type:'number',value:x.pct},
+    {key:'start',label:'Start date',type:'date',value:x.start},
+    {key:'target',label:'Target completion',type:'date',value:x.target},
+    {key:'status',label:'Status',type:'select',value:x.status,options:['Planned','In Progress','Delayed','Complete']},
+  ],data=>{
+    ['budget','spent','pct'].forEach(k=>data[k]=+data[k]||0);
+    const pm=properties.find(p=>p.name===data.prop); data.prop=pm?pm.id:x.prop;
+    if(x._id)Object.assign(x,data);
+    else projects.push({...data,_id:'J'+(nextProjId++)});
+    render('construction');
+  });
+}
+function editProject(id){projForm(projects.find(x=>x._id===id),false);}
+function addProject(){projForm({prop:properties[0].id,name:'',scope:'',budget:0,spent:0,pct:0,start:'',target:'',status:'Planned'},true);}
+function deleteProject(id){if(confirm('Delete this project?')){projects.splice(projects.findIndex(x=>x._id===id),1);saveData();render('construction');}}
+
+function lineFormFor(id,type,r,i){
+  const sign=type==='expense'?-1:1;
+  const hint=type==='income'?'(use a negative number for vacancy / loss-to-lease)':'(enter a positive cost)';
+  modal((i==null?'Add ':'Edit ')+(type==='income'?'Income':'Expense')+' Line',[
+    {key:'name',label:'Line item / category',value:r[0]},
+    {key:'actual',label:'Actual ($/yr) '+hint,type:'number',value:sign*r[1]},
+    {key:'budget',label:'Budget ($/yr)',type:'number',value:sign*r[2]},
+  ],data=>{
+    const a=sign*(+data.actual||0), b=sign*(+data.budget||0);
+    const row=[data.name||'(unnamed)',a,b];
+    if(i==null)fin[id][type].push(row); else fin[id][type][i]=row;
+    render('financials');
+  });
+}
+function editLine(id,type,i){lineFormFor(id,type,fin[id][type][i],i);}
+function addLine(id,type){lineFormFor(id,type,['',0,0],null);}
+function deleteLine(id,type,i){if(confirm('Delete this line item?')){fin[id][type].splice(i,1);saveData();render('financials');}}
+
+// ---------- router ----------
+// ---------- returns / IRR ----------
+function irr(cfs){
+  const npv=r=>cfs.reduce((s,c,t)=>s+c/Math.pow(1+r,t),0);
+  let lo=-0.95,hi=3; if(npv(lo)*npv(hi)>0)return null;
+  for(let k=0;k<200;k++){const mid=(lo+hi)/2,v=npv(mid); if(Math.abs(v)<1)return mid; if(npv(lo)*v<0)hi=mid; else lo=mid;}
+  return (lo+hi)/2;
+}
+function returnsCalc(id){
+  const p=propById(id), d=debt[id]||{balance:0};
+  const n=Math.max(1,Math.round(p.holdYears||5));
+  const exitCap=(p.exitCap||capRate(id)+0.25)/100;
+  const equity=Math.max(p.acqPrice-(d.balance||0),1);
+  const annualCF=noi(id)-annualDS(d);
+  const exitValue=exitCap>0?noi(id)/exitCap:0;
+  const saleCosts=exitValue*0.02;
+  const netProceeds=exitValue-saleCosts-(d.balance||0);
+  const cfs=[-equity]; for(let t=1;t<=n;t++)cfs.push(t===n?annualCF+netProceeds:annualCF);
+  const total=annualCF*n+netProceeds; // total cash returned to equity over the hold
+  return {equity,annualCF,coc:annualCF/equity*100,exitCap:exitCap*100,exitValue,netProceeds,total,em:total/equity,irr:irr(cfs),hold:n};
+}
+function returnsView(){
+  const rows=properties.map(p=>{const r=returnsCalc(p.id);const ir=r.irr==null?'n/a':(r.irr*100).toFixed(1)+'%';
+    const irCls=r.irr==null?'b-gray':r.irr*100>=15?'b-green':r.irr*100>=10?'b-amber':'b-red';
+    return `<tr onclick="go('property','${p.id}')" style="cursor:pointer"><td><strong>${p.name}</strong><div class="type-tag">${p.strategy} &middot; ${r.hold}yr hold &middot; exit @ ${r.exitCap.toFixed(2)}%</div></td>
+      <td class="num">${fmt(r.equity)}</td><td class="num">${fmt(r.annualCF)}</td><td class="num">${r.coc.toFixed(1)}%</td>
+      <td class="num">${fmt(r.exitValue)}</td><td class="num">${fmt(r.netProceeds)}</td>
+      <td class="num">${r.em.toFixed(2)}x</td><td class="num"><span class="badge ${irCls}">${ir}</span></td></tr>`;}).join('');
+  const tEq=properties.reduce((s,p)=>s+returnsCalc(p.id).equity,0);
+  const tTotal=properties.reduce((s,p)=>s+returnsCalc(p.id).total,0);
+  return `<h1>Returns &amp; IRR</h1><div class="sub">Levered return projection per asset. Assumptions (hold period, exit cap) are editable on each property.</div>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="label">Going-in Equity</div><div class="val">${fmtK(tEq)}</div></div>
+    <div class="kpi"><div class="label">Projected Profit</div><div class="val">${fmtK(tTotal-tEq)}</div><div class="sm">total returned minus equity in</div></div>
+    <div class="kpi"><div class="label">Blended Equity Multiple</div><div class="val">${(tTotal/tEq).toFixed(2)}x</div></div>
+  </div>
+  <div class="read"><h3>Asset Manager's Read</h3><p>IRR is the headline metric for an LP. It's driven by going-in basis, leverage, annual cash flow, and the <strong>exit cap rate</strong> — the single biggest swing factor. A 25bps move in exit cap can shift IRR by several points, so stress-test it. Cash-on-cash below the loan rate signals negative leverage; watch Court St, where a tight DSCR compresses distributable cash flow. Edit any property's hold period or exit cap to re-run the model.</p></div>
+  <div class="card"><h2>Projected Returns by Asset</h2><table>
+    <thead><tr><th>Property</th><th class="num">Equity</th><th class="num">Annual CF</th><th class="num">Yr-1 CoC</th><th class="num">Exit Value</th><th class="num">Net Proceeds</th><th class="num">Equity Mult.</th><th class="num">IRR</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <div style="padding:12px 18px;font-size:11.5px" class="muted">Simplified model: NOI held flat over the hold, 2% sale costs, loan balance assumed constant. For illustration, not investment advice.</div></div>`;
+}
+const views={dashboard,properties:propertiesView,financials,debt:debtView,investors:investorsView,returns:returnsView,leases:leasesView,construction:constructionView,ops:opsView};
+function render(view,arg){
+  const m=document.getElementById('main');
+  m.innerHTML = view==='property'?propertyDetail(arg):views[view]();
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===view));
+  window.scrollTo(0,0);
+  if(view==='dashboard')setTimeout(renderCharts,30);
+}
+function go(v,arg){render(v,arg);}
+document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a');if(a&&a.dataset.view)render(a.dataset.view);});
+function enterApp(){const s=document.getElementById('splash');if(s)s.style.display='none';render('dashboard');}
+initData();
+render('dashboard');
+</script>
+</body>
+</html>
